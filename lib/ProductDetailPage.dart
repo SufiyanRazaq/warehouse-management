@@ -112,6 +112,7 @@ class ProductDetailPage extends StatelessWidget {
           _buildInfoRow("Brand", brand),
           _buildInfoRow("Color", color),
           _buildInfoRow("Size", size),
+          _buildInfoRow("Order By", "Ricci"),
           const SizedBox(height: 12),
           Text(
             'Note: $note',

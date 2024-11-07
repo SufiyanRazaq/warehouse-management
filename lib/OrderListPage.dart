@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:warehouseproject/ProductDetailPage.dart';
 import 'OrderDetailsPage.dart';
 import 'CreateOrder.dart';
 
@@ -11,10 +12,46 @@ class OrderListPage extends StatefulWidget {
 
 class _OrderListPageState extends State<OrderListPage> {
   List<Map<String, dynamic>> orders = [];
+  String? _branchName;
+  List<Map<String, dynamic>> _orderItems = [];
+  String orderDate = '';
+  String note = '';
+
+  Future<void> _loadOrderData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? storedOrders = prefs.getString('orders');
+    if (storedOrders != null) {
+      List<dynamic> decodedOrders = jsonDecode(storedOrders);
+      List<Map<String, dynamic>> allOrders =
+          List<Map<String, dynamic>>.from(decodedOrders);
+
+      Map<String, dynamic>? selectedOrder = allOrders.firstWhere(
+          (order) => order['orderId'] == order['orderId'],
+          orElse: () => {});
+
+      if (selectedOrder.isNotEmpty && selectedOrder.containsKey('items')) {
+        setState(() {
+          orderDate = selectedOrder['orderDate'] ?? 'Unknown';
+          note = selectedOrder['note'] ?? 'No notes available';
+
+          _orderItems = List<Map<String, dynamic>>.from(selectedOrder['items'])
+              .map((item) => {
+                    ...item,
+                    'orderId': selectedOrder['orderId'],
+                    'orderDate': orderDate,
+                    'note': note,
+                  })
+              .toList();
+        });
+      }
+    }
+  }
 
   @override
   void initState() {
     super.initState();
+    _loadBranchName();
+    _loadOrderData();
     _loadOrders();
   }
 
@@ -29,12 +66,18 @@ class _OrderListPageState extends State<OrderListPage> {
     }
   }
 
+  Future<void> _loadBranchName() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _branchName = prefs.getString('selectedBranch') ?? "Branch";
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: _buildAppBar(context),
       body: Container(
-        decoration: _backgroundGradient(),
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,7 +107,7 @@ class _OrderListPageState extends State<OrderListPage> {
                 builder: (context) => CreateOrderPage(),
               ),
             ).then((_) {
-              _loadOrders();
+              _loadOrders(); // Reload orders after returning
             });
           },
           icon: const Icon(
@@ -74,16 +117,6 @@ class _OrderListPageState extends State<OrderListPage> {
           ),
         ),
       ],
-    );
-  }
-
-  BoxDecoration _backgroundGradient() {
-    return BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Colors.white, Colors.grey.shade200],
-      ),
     );
   }
 
@@ -106,10 +139,8 @@ class _OrderListPageState extends State<OrderListPage> {
           children: [
             Icon(Icons.list_alt, color: Colors.grey.shade400, size: 80),
             const SizedBox(height: 10),
-            const Text(
-              "No orders available.",
-              style: TextStyle(color: Colors.grey, fontSize: 16),
-            ),
+            const Text("No orders available.",
+                style: TextStyle(color: Colors.grey, fontSize: 16)),
           ],
         ),
       );
@@ -122,8 +153,11 @@ class _OrderListPageState extends State<OrderListPage> {
           context,
           orderId: order['orderId'] ?? 'N/A',
           status: order['status'] ?? 'Pending',
-          details: order['note'] ?? '',
+          details: order['details'] ?? '',
           items: List<Map<String, dynamic>>.from(order['items'] ?? []),
+          orderDate: order['orderDate'] ?? 'N/A',
+          branchName: order['branchName'] ?? 'Branch',
+          orderedBy: order['orderedBy'] ?? 'Ricci',
         );
       },
     );
@@ -133,24 +167,48 @@ class _OrderListPageState extends State<OrderListPage> {
       {required String orderId,
       required String status,
       required String details,
-      required List<Map<String, dynamic>> items}) {
+      required List<Map<String, dynamic>> items,
+      required String orderDate,
+      required String branchName,
+      required String orderedBy}) {
     final statusInfo = _getStatusInfo(status);
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => OrderDetailsPage(orderId: orderId),
-          ),
-        ).then((_) {
-          _loadOrders();
-        });
+        if (items.isNotEmpty) {
+          // Combine item data with orderId and orderDate before passing
+          final itemWithOrderDetails = {
+            ...items[0], // Item details
+            'orderId': orderId, // Include orderId
+            'orderDate': orderDate, // Include orderDate
+          };
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  ProductDetailPage(item: itemWithOrderDetails),
+            ),
+          ).then((_) {
+            _loadOrders(); // Reload orders after returning
+          });
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
-        decoration: _cardDecoration(),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade300,
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(color: const Color(0xFFA6802D), width: 1),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -159,38 +217,40 @@ class _OrderListPageState extends State<OrderListPage> {
                 Icon(statusInfo.icon, color: statusInfo.color, size: 30),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildOrderDetails(orderId, details),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Order #$orderId",
+                        style: const TextStyle(
+                          color: Color(0xFFA6802D),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text("Date: $orderDate"),
+                      Text("Branch: $branchName"),
+                      Text("Ordered by: $orderedBy"),
+                      const SizedBox(height: 4),
+                      Text(details,
+                          style: const TextStyle(
+                              color: Colors.black87, fontSize: 14)),
+                    ],
+                  ),
                 ),
                 _buildStatusBadge(status, statusInfo.color),
               ],
             ),
+            const SizedBox(height: 10),
+            Text(
+              "Items: ${items.length}",
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: Colors.grey[800]),
+            ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildOrderDetails(String orderId, String details) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "Order #$orderId",
-          style: const TextStyle(
-            color: Color(0xFFA6802D),
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          details,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 14,
-          ),
-        ),
-      ],
     );
   }
 
@@ -209,21 +269,6 @@ class _OrderListPageState extends State<OrderListPage> {
           fontWeight: FontWeight.w600,
         ),
       ),
-    );
-  }
-
-  BoxDecoration _cardDecoration() {
-    return BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(15),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.shade300,
-          blurRadius: 8,
-          offset: const Offset(0, 4),
-        ),
-      ],
-      border: Border.all(color: const Color(0xFFA6802D), width: 1),
     );
   }
 

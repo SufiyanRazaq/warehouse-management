@@ -35,8 +35,8 @@ class _DateOrderPageState extends State<DateOrderPage> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedOrderDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2101),
+      firstDate: DateTime(2000), // Start date for selection
+      lastDate: DateTime.now(), // Restrict to current or past dates only
     );
     if (picked != null && picked != _selectedOrderDate) {
       setState(() {
@@ -199,20 +199,22 @@ class _DateOrderPageState extends State<DateOrderPage> {
       width: double.infinity,
       padding: const EdgeInsets.all(16.0),
       child: ElevatedButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => LoginScreen(
-                orderId: 'II-${DateTime.now().millisecondsSinceEpoch}',
-                selectedItem: _selectedItemData!['selectedItem'],
-                quantity: _selectedItemData!['quantity'],
-                orderDate: _selectedOrderDate,
-                note: _noteController.text,
-              ),
-            ),
-          );
-        },
+        onPressed: _selectedItemData != null
+            ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => LoginScreen(
+                      orderId: 'II-${DateTime.now().millisecondsSinceEpoch}',
+                      selectedItem: _selectedItemData!['selectedItem'],
+                      quantity: _selectedItemData!['quantity'],
+                      orderDate: _selectedOrderDate,
+                      note: _noteController.text,
+                    ),
+                  ),
+                );
+              }
+            : null, // Disable button if _selectedItemData is null
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFFA6802D),
           padding: const EdgeInsets.symmetric(vertical: 16),

@@ -10,104 +10,176 @@ class SelectItemsPage extends StatefulWidget {
 
 class _SelectItemsPageState extends State<SelectItemsPage> {
   final TextEditingController _searchController = TextEditingController();
-  List<Map<String, dynamic>> _allItems = [
+  final List<Map<String, dynamic>> _allItems = [
     {
-      "title": "Vintage Leather Jacket",
+      "title": "Women's Sandals",
       "styleNumber": "#1023",
       "barcode": "9876543210",
       "brand": "Urban Outfitters",
-      "color": "Brown",
-      "size": "M",
-      "image": "assets/1.jpg",
+      "color": "Pink",
+      "size": "41",
+      "image": "assets/sandals.jpg",
       "price": "\$180"
     },
     {
-      "title": "Classic Denim Jeans",
-      "styleNumber": "#2048",
-      "barcode": "1234567890",
-      "brand": "Levi's",
-      "color": "Blue",
-      "size": "32",
-      "image": "assets/1.jpg",
-      "price": "\$80"
+      "title": "Women's Clothes",
+      "styleNumber": "#1023",
+      "barcode": "9876543210",
+      "brand": "Urban Outfitters",
+      "color": "Red",
+      "size": "31",
+      "image": "assets/clothes.jpg",
+      "price": "\$100"
     },
   ];
+
   List<Map<String, dynamic>> _filteredItems = [];
-  int? _selectedIndex;
-  Map<int, int> _itemQuantities = {};
+  Map<String, dynamic>? _displayedItem;
+  final Map<int, int> _itemQuantities = {};
 
   @override
   void initState() {
     super.initState();
-    _filteredItems = _allItems;
+    _displayedItem = null; // Initially, no item is displayed
+    _filteredItems = [];
     _searchController.addListener(_filterItems);
   }
 
   void _filterItems() {
     setState(() {
       final query = _searchController.text.toLowerCase();
-      _filteredItems = _allItems.where((item) {
-        return item["title"].toString().toLowerCase().contains(query) ||
-            item["styleNumber"].toString().toLowerCase().contains(query) ||
-            item["barcode"].toString().toLowerCase().contains(query) ||
-            item["brand"].toString().toLowerCase().contains(query) ||
-            item["color"].toString().toLowerCase().contains(query) ||
-            item["size"].toString().toLowerCase().contains(query);
-      }).toList();
+      if (query.isEmpty) {
+        _filteredItems = [];
+      } else {
+        _filteredItems = _allItems.where((item) {
+          return item["title"].toString().toLowerCase().contains(query) ||
+              item["styleNumber"].toString().toLowerCase().contains(query) ||
+              item["barcode"].toString().toLowerCase().contains(query) ||
+              item["brand"].toString().toLowerCase().contains(query) ||
+              item["color"].toString().toLowerCase().contains(query) ||
+              item["size"].toString().toLowerCase().contains(query);
+        }).toList();
+      }
     });
   }
 
-  void _selectItem(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+  Future<void> _scanBarcode() async {
+    if (_displayedItem != null &&
+        _itemQuantities[_allItems.indexOf(_displayedItem!)] != 0) {
+      _showAlreadySelectedDialog();
+    } else {
+      // Navigate to the dummy scanner screen
+      await Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => ScannerScreen()),
+      );
+
+      // Automatically select the first item after returning from scanner
+      setState(() {
+        _displayedItem = _allItems[0];
+        _itemQuantities[_allItems.indexOf(_displayedItem!)] =
+            1; // Set quantity to 1
+      });
+
+      // Show confirmation dialog
+      _showItemSelectedDialog();
+    }
+  }
+
+  void _showItemSelectedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Item Selected'),
+        content: const Text('The first item has been selected automatically.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAlreadySelectedDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Item Already Selected'),
+        content: const Text(
+            'You already have a selected item. Select a new item only if needed.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _changeItemQuantity(int index, int delta) {
     setState(() {
-      _itemQuantities[index] = (_itemQuantities[index] ?? 0) + delta;
-      if (_itemQuantities[index]! < 0) _itemQuantities[index] = 0;
+      int newQuantity = (_itemQuantities[index] ?? 0) + delta;
+      if (newQuantity <= 0) {
+        _itemQuantities.remove(index); // Remove item if quantity reaches zero
+      } else {
+        _itemQuantities[index] = newQuantity;
+      }
     });
   }
 
+  bool get _isNextButtonEnabled {
+    return _itemQuantities.values.any((quantity) => quantity > 0);
+  }
+
   Future<void> _saveSelectedItemData() async {
-    if (_selectedIndex != null && (_itemQuantities[_selectedIndex!] ?? 0) > 0) {
-      SharedPreferences prefs = await SharedPreferences.getInstance();
+    SharedPreferences prefs = await SharedPreferences.getInstance();
 
-      // Create a map of selected item details
-      Map<String, dynamic> selectedItemData = {
-        'selectedItem': _filteredItems[_selectedIndex!],
-        'quantity': _itemQuantities[_selectedIndex!]
+    Map<String, dynamic>? selectedItemData;
+    if (_displayedItem != null &&
+        _itemQuantities[_allItems.indexOf(_displayedItem!)] != null &&
+        _itemQuantities[_allItems.indexOf(_displayedItem!)]! > 0) {
+      selectedItemData = {
+        'selectedItem': _displayedItem,
+        'quantity': _itemQuantities[_allItems.indexOf(_displayedItem!)]!,
       };
+    }
 
-      // Save the selected item to SharedPreferences
+    if (selectedItemData != null) {
       await prefs.setString('selectedItemData', jsonEncode(selectedItemData));
     }
   }
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: _buildAppBar(context),
-      body: Container(
-        decoration: _buildBackgroundGradient(),
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
-        child: Column(
-          children: [
-            _buildPageTitle(),
-            const SizedBox(height: 20),
-            _buildSearchField(),
-            const SizedBox(height: 20),
-            Expanded(child: _buildItemsList()),
-            _buildNextButton(context),
-          ],
-        ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20),
+              child: Column(
+                children: [
+                  _buildPageTitle(),
+                  const SizedBox(height: 20),
+                  _buildSearchField(),
+                  _buildSearchSuggestions(),
+                  const SizedBox(height: 20),
+                  if (_displayedItem != null &&
+                      _itemQuantities[_allItems.indexOf(_displayedItem!)]! > 0)
+                    _buildItemCard(_displayedItem!),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+          _buildNextButton(context), // Place Next button at the end
+        ],
       ),
     );
   }
@@ -122,16 +194,16 @@ class _SelectItemsPageState extends State<SelectItemsPage> {
       elevation: 0,
       title: Image.asset("assets/LRLogo1.png", height: 40),
       centerTitle: true,
-    );
-  }
-
-  BoxDecoration _buildBackgroundGradient() {
-    return BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Colors.white, Colors.grey.shade200],
-      ),
+      actions: [
+        IconButton(
+          onPressed: _scanBarcode,
+          icon: const Icon(
+            Icons.qr_code_2_outlined,
+            color: Color(0xFFA6802D),
+            size: 30,
+          ),
+        ),
+      ],
     );
   }
 
@@ -183,140 +255,83 @@ class _SelectItemsPageState extends State<SelectItemsPage> {
     );
   }
 
-  Widget _buildItemsList() {
-    return ListView.builder(
-      itemCount: _filteredItems.length,
-      itemBuilder: (context, index) {
-        final item = _filteredItems[index];
-        final isSelected = index == _selectedIndex;
-        return _buildItemCard(
-          index,
-          item["title"],
-          item["styleNumber"],
-          item["barcode"],
-          item["brand"],
-          item["color"],
-          item["size"],
-          item["image"],
-          item["price"],
-          isSelected,
-        );
-      },
+  Widget _buildSearchSuggestions() {
+    if (_searchController.text.isEmpty || _filteredItems.isEmpty) {
+      return const SizedBox();
+    }
+
+    return Container(
+      height: 200,
+      child: ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: _filteredItems.length,
+        itemBuilder: (context, index) {
+          final item = _filteredItems[index];
+          return ListTile(
+            title: Text(item["title"]),
+            subtitle: Text("Brand: ${item["brand"]}, Color: ${item["color"]}"),
+            leading: Image.asset(item["image"], width: 50, height: 50),
+            onTap: () => _selectItem(index),
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildItemCard(
-    int index,
-    String title,
-    String styleNumber,
-    String barcode,
-    String brand,
-    String color,
-    String size,
-    String image,
-    String price,
-    bool isSelected,
-  ) {
+  Widget _buildItemCard(Map<String, dynamic> item) {
+    int index = _allItems.indexOf(item);
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: GestureDetector(
-        onTap: () => _selectItem(index),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: isSelected ? const Color(0xFFFFF8E1) : Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(
-              color: isSelected
-                  ? const Color(0xFF4CAF50)
-                  : const Color(0xFFA6802D),
-              width: 1.5,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: const Color(0xFFA6802D), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.shade300,
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.shade300,
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style: const TextStyle(
-                            color: Color(0xFFA6802D),
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        _buildItemDetail("Style Number", styleNumber),
-                        _buildItemDetail("Barcode", barcode),
-                        _buildItemDetail("Brand", brand),
-                        _buildItemDetail("Color", color),
-                        _buildItemDetail("Size", size),
-                        _buildItemDetail("Price", price),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  _buildItemImage(image),
-                ],
-              ),
-              const SizedBox(height: 8),
-              _buildQuantityControl(
-                  index), // Add quantity control for each item
-            ],
-          ),
+          ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildItemDetail(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4.0),
-      child: Row(
-        children: [
-          Text(
-            "$label: ",
-            style: const TextStyle(
-              color: Color(0xFFA6802D),
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item["title"],
+                        style: const TextStyle(
+                          color: Color(0xFFA6802D),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text("Style Number: ${item["styleNumber"]}"),
+                      Text("Barcode: ${item["barcode"]}"),
+                      Text("Brand: ${item["brand"]}"),
+                      Text("Color: ${item["color"]}"),
+                      Text("Size: ${item["size"]}"),
+                      Text("Price: ${item["price"]}"),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Image.asset(item["image"], height: 100, width: 100),
+              ],
             ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.black87,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildItemImage(String imagePath) {
-    return Container(
-      height: 100,
-      width: 100,
-      decoration: BoxDecoration(
-        color: Colors.grey.shade200,
-        borderRadius: BorderRadius.circular(10),
-        image: DecorationImage(
-          image: AssetImage(imagePath),
-          fit: BoxFit.cover,
+            const SizedBox(height: 8),
+            _buildQuantityControl(index),
+          ],
         ),
       ),
     );
@@ -339,7 +354,7 @@ class _SelectItemsPageState extends State<SelectItemsPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             decoration: BoxDecoration(
-              color: Color(0xFFA6802D).withOpacity(0.1),
+              color: const Color(0xFFA6802D).withOpacity(0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
@@ -365,41 +380,77 @@ class _SelectItemsPageState extends State<SelectItemsPage> {
   }
 
   Widget _buildNextButton(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _selectedIndex != null &&
-                (_itemQuantities[_selectedIndex!] ?? 0) > 0
-            ? () async {
-                await _saveSelectedItemData();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => DateOrderPage(),
-                  ),
-                );
-              }
-            : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFFA6802D),
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(15.0),
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: SizedBox(
+        width: double.infinity,
+        child: ElevatedButton(
+          onPressed: _isNextButtonEnabled
+              ? () async {
+                  await _saveSelectedItemData();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DateOrderPage(),
+                    ),
+                  );
+                }
+              : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFA6802D),
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(15.0),
+            ),
+            elevation: 5,
+            shadowColor: Colors.grey.shade400,
           ),
-          elevation: 5,
-          shadowColor: Colors.grey.shade400,
-        ),
-        child: const Text(
-          "Next",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+          child: const Text(
+            "Next",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),
     );
   }
+
+  void _selectItem(int index) {
+    setState(() {
+      _displayedItem = _filteredItems[index];
+      _itemQuantities[_allItems.indexOf(_displayedItem!)] = 1;
+      _searchController.clear();
+      _filteredItems = [];
+    });
+  }
 }
 
-// Similarly, update DateOrderPage and LoginScreen to use SharedPreferences for saving order details and adding consistency in passing and storing data between pages.
+// Dummy scanner screen that closes itself after a delay
+class ScannerScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    Future.delayed(const Duration(seconds: 3), () {
+      Navigator.pop(context);
+    });
+
+    return const Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.qr_code_2_outlined, color: Colors.white, size: 150),
+            SizedBox(height: 20),
+            Text(
+              "Scanning...",
+              style: TextStyle(color: Colors.white, fontSize: 24),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
