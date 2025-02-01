@@ -40,7 +40,7 @@ class _SelectItemsPageState extends State<SelectItemsPage> {
   @override
   void initState() {
     super.initState();
-    _displayedItem = null; // Initially, no item is displayed
+    _displayedItem = null;
     _filteredItems = [];
     _searchController.addListener(_filterItems);
   }
@@ -68,20 +68,16 @@ class _SelectItemsPageState extends State<SelectItemsPage> {
         _itemQuantities[_allItems.indexOf(_displayedItem!)] != 0) {
       _showAlreadySelectedDialog();
     } else {
-      // Navigate to the dummy scanner screen
       await Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => ScannerScreen()),
       );
 
-      // Automatically select the first item after returning from scanner
       setState(() {
         _displayedItem = _allItems[0];
-        _itemQuantities[_allItems.indexOf(_displayedItem!)] =
-            1; // Set quantity to 1
+        _itemQuantities[_allItems.indexOf(_displayedItem!)] = 1;
       });
 
-      // Show confirmation dialog
       _showItemSelectedDialog();
     }
   }
@@ -123,7 +119,7 @@ class _SelectItemsPageState extends State<SelectItemsPage> {
     setState(() {
       int newQuantity = (_itemQuantities[index] ?? 0) + delta;
       if (newQuantity <= 0) {
-        _itemQuantities.remove(index); // Remove item if quantity reaches zero
+        _itemQuantities.remove(index);
       } else {
         _itemQuantities[index] = newQuantity;
       }
@@ -178,7 +174,7 @@ class _SelectItemsPageState extends State<SelectItemsPage> {
               ),
             ),
           ),
-          _buildNextButton(context), // Place Next button at the end
+          _buildNextButton(context),
         ],
       ),
     );
@@ -428,7 +424,6 @@ class _SelectItemsPageState extends State<SelectItemsPage> {
   }
 }
 
-// Dummy scanner screen that closes itself after a delay
 class ScannerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {

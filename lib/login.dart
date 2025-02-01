@@ -223,7 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: ElevatedButton(
         onPressed: () async {
           if (_formKey.currentState?.validate() ?? false) {
-            await _saveOrderData(); // Save the order on login button click
+            await _saveOrderData();
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => OrderConfirmationPage()),

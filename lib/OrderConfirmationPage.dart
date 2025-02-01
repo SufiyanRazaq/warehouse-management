@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:warehouseproject/CreateOrder.dart';
 
 class OrderConfirmationPage extends StatelessWidget {
-  final String orderId = "II-0980"; // Example order ID
+  final String orderId = "II-0980";
 
   @override
   Widget build(BuildContext context) {

@@ -9,7 +9,7 @@ class ProductDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5), // Soft background color
+      backgroundColor: const Color(0xFFF5F5F5),
       appBar: AppBar(
         title: const Text(
           'Product Details',
@@ -51,7 +51,7 @@ class ProductDetailPage extends StatelessWidget {
               const SizedBox(height: 20),
               _buildPriceAndQuantityInfo(item['price'], item['quantity'] ?? 1),
               const SizedBox(height: 24),
-              _buildActionButton(context), // New button for interaction
+              _buildActionButton(context),
             ],
           ),
         ),

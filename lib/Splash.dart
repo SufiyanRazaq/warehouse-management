@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'CreateOrder.dart';
 
@@ -81,7 +80,7 @@ class _SplashScreenState extends State<SplashScreen>
                       child: Center(
                         child: Text(
                           "Ready-made shoes, bags, and fashion item distributors and dealers",
-                          textAlign: TextAlign.center, // Center-aligns the text
+                          textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,

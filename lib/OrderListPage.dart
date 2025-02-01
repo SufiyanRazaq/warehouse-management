@@ -107,7 +107,7 @@ class _OrderListPageState extends State<OrderListPage> {
                 builder: (context) => CreateOrderPage(),
               ),
             ).then((_) {
-              _loadOrders(); // Reload orders after returning
+              _loadOrders();
             });
           },
           icon: const Icon(
@@ -176,11 +176,10 @@ class _OrderListPageState extends State<OrderListPage> {
     return GestureDetector(
       onTap: () {
         if (items.isNotEmpty) {
-          // Combine item data with orderId and orderDate before passing
           final itemWithOrderDetails = {
-            ...items[0], // Item details
-            'orderId': orderId, // Include orderId
-            'orderDate': orderDate, // Include orderDate
+            ...items[0],
+            'orderId': orderId,
+            'orderDate': orderDate,
           };
 
           Navigator.push(
@@ -190,7 +189,7 @@ class _OrderListPageState extends State<OrderListPage> {
                   ProductDetailPage(item: itemWithOrderDetails),
             ),
           ).then((_) {
-            _loadOrders(); // Reload orders after returning
+            _loadOrders();
           });
         }
       },

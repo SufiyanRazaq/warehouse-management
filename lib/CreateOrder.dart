@@ -61,9 +61,7 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
                       context,
                       "New Item",
                       Icons.add_circle,
-                      () {
-                        // Implement New Item functionality
-                      },
+                      () {},
                     ),
                     const SizedBox(height: 20),
                     _buildActionButton(
@@ -83,9 +81,7 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
                       context,
                       "Customer Request",
                       Icons.person,
-                      () {
-                        // Implement Customer Request functionality
-                      },
+                      () {},
                     ),
                   ],
                 ),
